@@ -18,10 +18,29 @@ class TodoListViewController: UITableViewController {
         if let items = defaults.array(forKey: "TodoListArray") as? [String] {
             itemArray = items
         }
+        
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "ToDoItemCell")
+        
+        setupNavigationBar()
     }
     
-    //MARK: - TableView DataSource Methods
-    
+    private func setupNavigationBar() {
+        navigationItem.title = "Todoey"
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .systemCyan
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = navigationController?.navigationBar.standardAppearance
+        
+        let addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addButtonTapped))
+        addButton.tintColor = .white
+        navigationItem.rightBarButtonItem = addButton
+    }
+}
+
+// MARK: - UITableView Delegate and DataSource
+
+extension TodoListViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return itemArray.count
     }
@@ -32,8 +51,6 @@ class TodoListViewController: UITableViewController {
         return cell
     }
     
-    //MARK: - TableView Delegate Methods
-    
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let cell = tableView.cellForRow(at: indexPath)
         if cell?.accessoryType == UITableViewCell.AccessoryType.none {
@@ -43,8 +60,12 @@ class TodoListViewController: UITableViewController {
         }
         tableView.deselectRow(at: indexPath, animated: true)
     }
-    
-    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+}
+
+// MARK: - Actions
+
+extension TodoListViewController {
+    @objc private func addButtonTapped(_ sender: UIBarButtonItem) {
         let alert = UIAlertController(title: "Add New Todo Item", message: "", preferredStyle: .alert)
         var alertTextField = UITextField()
         
@@ -63,6 +84,4 @@ class TodoListViewController: UITableViewController {
         alert.addAction(action)
         present(alert, animated: true)
     }
-    
 }
-
