@@ -12,6 +12,12 @@ class TodoListViewController: UITableViewController {
     var itemArray: [Item] = []
     
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+    var category: Category? {
+        didSet { loadItems() }
+    }
+    
+    private let searchController = UISearchController(searchResultsController: nil)
         
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -19,7 +25,7 @@ class TodoListViewController: UITableViewController {
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "ToDoItemCell")
         
         setupNavigationBar()
-        loadItems()
+        configureSearchController()
     }
     
     private func setupNavigationBar() {
@@ -45,13 +51,29 @@ class TodoListViewController: UITableViewController {
         tableView.reloadData()
     }
     
-    private func loadItems() {
-        let request: NSFetchRequest<Item> = Item.fetchRequest()
+    private func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", category!.name!)
+        
+        if let addtionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [addtionalPredicate, categoryPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
+        
         do {
            itemArray = try context.fetch(request)
         } catch {
             print("error in fetching \(error.localizedDescription)")
         }
+    }
+    
+    private func configureSearchController() {
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.hidesNavigationBarDuringPresentation = false
+        searchController.searchBar.placeholder = "Search for a user"
+        searchController.searchResultsUpdater = self
+        searchController.searchBar.sizeToFit()
+        self.tableView.tableHeaderView = searchController.searchBar
     }
 }
 
@@ -71,6 +93,10 @@ extension TodoListViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         itemArray[indexPath.row].isChecked.toggle()
+//
+//        context.delete(itemArray[indexPath.row])
+//        itemArray.remove(at: indexPath.row)
+
         saveItems()
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -88,6 +114,8 @@ extension TodoListViewController {
                 let newItem = Item(context: self.context)
                 newItem.title = title
                 newItem.isChecked = false
+                newItem.parentCategory = self.category
+                self.itemArray.append(newItem)
                 self.saveItems()
             }
         }
@@ -98,5 +126,17 @@ extension TodoListViewController {
         }
         alert.addAction(action)
         present(alert, animated: true)
+    }
+}
+
+// MARK: - UISearchResultsUpdating
+
+extension TodoListViewController: UISearchResultsUpdating {
+    func updateSearchResults(for searchController: UISearchController) {
+        guard let text = searchController.searchBar.text else { return }
+        
+        let request: NSFetchRequest<Item> = Item.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        loadItems(with: request, predicate: text.isEmpty ? nil : NSPredicate(format: "title CONTAINS[cd] %@", text))
     }
 }
